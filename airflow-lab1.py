@@ -4,11 +4,11 @@ from elasticsearch import Elasticsearch
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-import uuid 
+import uuid
 
 default_args = {
     'owner': 'mariashaina',
-    'start_date': datetime(2023, 12, 1),
+    'start_date': datetime(2023, 12, 6),
 }
 
 dag = DAG(
@@ -18,17 +18,11 @@ dag = DAG(
 )
 
 def extract_transform_load_data():
-    result_dataframe = pd.DataFrame()
-    for i in range(26):
-        current_chunck = pd.read_csv(f"/opt/airflow/data/chunk{i}.csv")
-        result_dataframe = pd.concat([result_dataframe, current_chunck])
+    chunks = [pd.read_csv(f"/opt/airflow/data/chunk{i}.csv") for i in range(26)]
+    result_dataframe = pd.concat(chunks)
 
-    result_dataframe = result_dataframe[
-        (~(result_dataframe['designation'].isnull()))
-        &
-        (~(result_dataframe['region_1'].isnull()))
-    ]
-    result_dataframe['price'] = result_dataframe['price'].replace(np.nan, 0)
+    result_dataframe = result_dataframe.dropna(subset=['designation', 'region_1'])
+    result_dataframe['price'] = result_dataframe['price'].fillna(0)
     result_dataframe = result_dataframe.drop(['id'], axis=1)
 
     result_dataframe.to_csv('/opt/airflow/data/data.csv', index=False)
@@ -44,35 +38,14 @@ def load_chunck_data_to_elastic():
 
     data_from_file = pd.read_csv('/opt/airflow/data/data.csv')
     
-    
     mod_data_from_file = data_from_file.fillna('')
-    final_data_from_file = mod_data_from_file.iterrows()
-
-    for i, current_row in final_data_from_file:
+    for i, current_row in mod_data_from_file.iterrows():
         id_documenta = str(uuid.uuid4())
 
-        row_documenta = {
-            "country": current_row["country"],
-            "description": current_row["description"],
-            "designation": current_row["designation"],
-            "points": current_row["points"],
-            "price": current_row["price"],
-            "province": current_row["province"],
-            "region_1": current_row["region_1"],
-            "taster_name": current_row["taster_name"],
-            "taster_twitter_handle": current_row["taster_twitter_handle"],
-            "title": current_row["title"],
-            "variety": current_row["variety"],
-            "winery": current_row["winery"],
-        }
+        row_documenta = {key: current_row[key] for key in ["country", "description", "designation", "points", "price", "province", "region_1", "taster_name", "taster_twitter_handle", "title", "variety", "winery"]}
 
-        elastic_connection.index(
-            index="dag_wines",
-            id=id_documenta,
-            body=row_documenta)
-
+        elastic_connection.index(index="dag_wines", id=id_documenta, body=row_documenta)
         print(row_documenta)
-
 
 load_task = PythonOperator(
     task_id='load_task',
