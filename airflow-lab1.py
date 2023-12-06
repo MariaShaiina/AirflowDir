@@ -7,12 +7,12 @@ import numpy as np
 import uuid 
 
 default_args = {
-    'owner': 'black_viking',
+    'owner': 'mariashaina',
     'start_date': datetime(2023, 12, 1),
 }
 
 dag = DAG(
-    'airline_dagestan',
+    'airflow_lab1',
     default_args=default_args,
     catchup=False,
 )
