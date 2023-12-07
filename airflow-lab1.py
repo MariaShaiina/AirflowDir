@@ -8,7 +8,7 @@ import uuid
 
 default_args = {
     'owner': 'mariashaina',
-    'start_date': datetime(2023, 12, 5),
+    'start_date': datetime(2023, 12, 6),
 }
 
 dag = DAG(
@@ -18,14 +18,14 @@ dag = DAG(
 )
 
 def extract_transform_load_data():
-    chunks = [pd.read_csv(f"/opt/airflow/data/chunk{i}.csv") for i in range(26)]
+    chunks = [pd.read_csv(f"/home/masha/Prerequisites/airflow/data/chunk{i}.csv") for i in range(26)]
     result_dataframe = pd.concat(chunks)
 
     result_dataframe = result_dataframe.dropna(subset=['designation', 'region_1'])
     result_dataframe['price'] = result_dataframe['price'].fillna(0)
     result_dataframe = result_dataframe.drop(['id'], axis=1)
 
-    result_dataframe.to_csv('/opt/airflow/data/data.csv', index=False)
+    result_dataframe.to_csv('/home/masha/Prerequisites/airflow/data/data.csv', index=False)
 
 etl_task = PythonOperator(
     task_id='etl_task',
@@ -36,7 +36,7 @@ etl_task = PythonOperator(
 def load_chunck_data_to_elastic():
     elastic_connection = Elasticsearch("http://elasticsearch-kibana:9200")
 
-    data_from_file = pd.read_csv('/opt/airflow/data/data.csv')
+    data_from_file = pd.read_csv('/home/masha/Prerequisites/airflow/data/data.csv')
     
     mod_data_from_file = data_from_file.fillna('')
     for i, current_row in mod_data_from_file.iterrows():
