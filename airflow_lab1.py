@@ -8,7 +8,7 @@ import uuid
 
 default_args = {
     'owner': 'mariashaina',
-    'start_date': datetime(2023, 12, 6),
+    'start_date': datetime.now(),
 }
 
 dag = DAG(
